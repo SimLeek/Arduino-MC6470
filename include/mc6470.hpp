@@ -244,8 +244,9 @@ namespace MC6470
   private:
     
     GainAndOffset get_gain_and_offset(){
+      func_print;
       GainAndOffset current;
-      
+
       uint8_t xoff_lsb = read_byte(address_accel, 0x21);
       uint8_t xoff_msb = read_byte(address_accel, 0x22);
       uint8_t yoff_lsb = read_byte(address_accel, 0x23);
@@ -256,9 +257,9 @@ namespace MC6470
       uint8_t ygain = read_byte(address_accel, 0x28);
       uint8_t zgain = read_byte(address_accel, 0x29);
 
-      current.x_offset = ((uint16_t)0 | xoff_lsb | ((uint16_t)(xoff_msb&0b01111111))<<8)<<1;
-      current.y_offset = ((uint16_t)0 | yoff_lsb | ((uint16_t)(yoff_msb&0b01111111))<<8)<<1;
-      current.z_offset = ((uint16_t)0 | zoff_lsb | ((uint16_t)(zoff_msb&0b01111111))<<8)<<1;
+      current.x_offset = ((uint16_t)0 | xoff_lsb | ((uint16_t)(xoff_msb&0b01111111))<<8)<<1 /2;
+      current.y_offset = ((uint16_t)0 | yoff_lsb | ((uint16_t)(yoff_msb&0b01111111))<<8)<<1 /2;
+      current.z_offset = ((uint16_t)0 | zoff_lsb | ((uint16_t)(zoff_msb&0b01111111))<<8)<<1 /2;
 
       current.x_gain = (uint16_t)0 | xgain | ((uint16_t)(xoff_msb&0b10000000))<<1;
       current.y_gain = (uint16_t)0 | ygain | ((uint16_t)(yoff_msb&0b10000000))<<1;
@@ -267,30 +268,72 @@ namespace MC6470
       return current;
     }
 
-    template<class T>
-    T unsigned_overflow_limit(T x, size_t max_bits){
-      T max_val = pow(2, max_bits)-1
-      if (x > max_val){
+    template<class T, size_t MAX_BITS>
+    T add_with_limits_unsigned(T a, T b){
+      func_print;
+      T max_val = pow(2, MAX_BITS)-1
+      if (a > max_val - b){
         return max_val;
       }else{
-        return x;
+        return a+b;
       }
     }
 
-    void set_res_and_range_state()
-    {
+    template<class T, size_t MAX_BITS, class U=T, class R=T>
+    R add_with_limits_signed(T a, U b){
       func_print;
-      uint8_t full_val = target_range | target_resolution;
-      uint8_t full_mask = ACC_OUTCFG_REG::RANGE_MASK | ACC_OUTCFG_REG::RES_MASK;
-      write_until_read_back(address_accel, acc_outcfg_reg_address, full_val, full_mask, cast_state(call_success_callback), 1000, cast_state(noop_state));
+      R max_val = (R)(pow(2, MAX_BITS-1)-1);
+      R min_val = -max_val-1;
+      // https://stackoverflow.com/a/1514309
+      if (b > 0 && a > max_val - b){
+        return max_val;
+      }else if(b < 0 && a < min_val - b){
+        return min_val;
+      }else{
+        return a+b;
+      }
     }
 
-    void set_res_and_range_state()
+    template<class T, size_t MAX_BITS, class U=T, class R=T>
+    R multiply_with_limits_unsigned(T a, U b){
+      func_print;
+      R max_val = (R)(pow(2, MAX_BITS)-1);
+      R min_val = 0;
+      // https://stackoverflow.com/a/1514309
+      if (b != 0 && a > max_val / b){
+        return max_val;
+      }else if(b != 0 && a < 0){
+        return 0;
+      }else{
+        return a*b;
+      }
+    }
+
+    void set_gain_and_offset_state()
     {
       func_print;
-      uint8_t full_val = target_range | target_resolution;
-      uint8_t full_mask = ACC_OUTCFG_REG::RANGE_MASK | ACC_OUTCFG_REG::RES_MASK;
-      write_until_read_back(address_accel, acc_outcfg_reg_address, full_val, full_mask, cast_state(call_success_callback), 1000, cast_state(noop_state));
+
+      GainAndOffset to_send = get_gain_and_offset();
+      to_send.x_offset = add_with_limits_signed<int16_t, 15>(to_send.x_offset, target.x_offset);
+      to_send.y_offset = add_with_limits_signed<int16_t, 15>(to_send.y_offset, target.y_offset);
+      to_send.z_offset = add_with_limits_signed<int16_t, 15>(to_send.z_offset, target.z_offset);
+      to_send.x_gain_chip = multiply_with_limits_unsigned<uint16_t, 9, float>(to_send.x_gain_chip, target.x_gain);
+      to_send.y_gain_chip = multiply_with_limits_unsigned<uint16_t, 9, float>(to_send.y_gain_chip, target.y_gain);
+      to_send.z_gain_chip = multiply_with_limits_unsigned<uint16_t, 9, float>(to_send.z_gain_chip, target.z_gain);
+
+      write_byte(address_accel, 0x20, (uint8_t)to_send.x_offset);
+      write_byte(address_accel, 0x21, ((uint8_t)(((uint16_t)to_send.x_offset)>>8)&0b01111111) | to_send.x_gain_chip>>8);
+      write_byte(address_accel, 0x22, (uint8_t)to_send.y_offset);
+      write_byte(address_accel, 0x23, ((uint8_t)(((uint16_t)to_send.y_offset)>>8)&0b01111111) | to_send.y_gain_chip>>8);
+      write_byte(address_accel, 0x24, (uint8_t)to_send.z_offset);
+      write_byte(address_accel, 0x25, ((uint8_t)(((uint16_t)to_send.z_offset)>>8)&0b01111111) | to_send.z_gain_chip>>8);
+      write_byte(address_accel, 0x26, (uint8_t)to_send.x_gain_chip);
+      write_byte(address_accel, 0x27, (uint8_t)to_send.y_gain_chip);
+      write_byte(address_accel, 0x28, (uint8_t)to_send.z_gain_chip);
+
+      set_state(noop_state);
+
+      this->on_success_callback();
     }
 
     /********************
