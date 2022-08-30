@@ -51,5 +51,7 @@
         "valarray": "cpp",
         "vector": "cpp",
         "array": "cpp"
-    }
+    },
+    "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: WebKit, ColumnLimit: 120 }",
+    "C_Cpp.errorSquiggles": "Disabled",
 }

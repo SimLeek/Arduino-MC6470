@@ -1,8 +1,11 @@
-#ifndef __MC6470_REGISTERS_ACCEL_HPP
-#define __MC6470_REGISTERS_ACCEL_HPP
+// Copyright (C) 2022 - Simleek <simulatorleek@gmail.com> - MIT License
+
+#ifndef INCLUDE_MC6470_REGISTERS_ACCEL_HPP_
+#define INCLUDE_MC6470_REGISTERS_ACCEL_HPP_
 
 #include <Arduino.h>
 #include <map>
+#include <utility>
 
 namespace MC6470
 {
@@ -34,19 +37,7 @@ namespace MC6470
     } ACC_SAMPLE_RATE_AND_TAP_FEATURE_REG;
     const uint8_t acc_srtf_reg_address = 0x08;
 
-    std::map<uint8_t, float> acc_get_rate_hz{
-        std::make_pair(ACC_SAMPLE_RATE_AND_TAP_FEATURE_REG::RATE_HZ32, 32),
-        std::make_pair(ACC_SAMPLE_RATE_AND_TAP_FEATURE_REG::RATE_HZ16, 16),
-        std::make_pair(ACC_SAMPLE_RATE_AND_TAP_FEATURE_REG::RATE_HZ8, 8),
-        std::make_pair(ACC_SAMPLE_RATE_AND_TAP_FEATURE_REG::RATE_HZ4, 4),
-        std::make_pair(ACC_SAMPLE_RATE_AND_TAP_FEATURE_REG::RATE_HZ2, 2),
-        std::make_pair(ACC_SAMPLE_RATE_AND_TAP_FEATURE_REG::RATE_HZ1, 1),
-        std::make_pair(ACC_SAMPLE_RATE_AND_TAP_FEATURE_REG::RATE_HZ0P5, 0.5),
-        std::make_pair(ACC_SAMPLE_RATE_AND_TAP_FEATURE_REG::RATE_HZ0P25, 0.25),
-        std::make_pair(ACC_SAMPLE_RATE_AND_TAP_FEATURE_REG::RATE_HZ64, 64),
-        std::make_pair(ACC_SAMPLE_RATE_AND_TAP_FEATURE_REG::RATE_HZ128, 128),
-        std::make_pair(ACC_SAMPLE_RATE_AND_TAP_FEATURE_REG::RATE_HZ256, 256),
-    };
+    extern std::map<uint8_t, float> acc_get_rate_hz;
 
     typedef enum : uint8_t
     {
@@ -55,6 +46,13 @@ namespace MC6470
         OPCON_MASK = 0b00000011
     } ACC_MODE_REG;
     const uint8_t acc_mode_reg_address = 0x07;
+
+    typedef enum : uint8_t
+    {
+        ACQ_INT_EN = 0b10000000,
+        // there are tap interrupts here too.
+    } ACC_INTEN_REG;
+    const uint8_t acc_inten_reg_address = 0x06;
 
     typedef enum : uint8_t
     {
@@ -85,6 +83,6 @@ namespace MC6470
         RANGE_MASK = 0b11110000, // Hack: bit 7 must always be 0, so range now sets it to that
     } ACC_OUTCFG_REG;
     const uint8_t acc_outcfg_reg_address = 0x20;
-}
+} // namespace MC6470
 
-#endif
+#endif // INCLUDE_MC6470_REGISTERS_ACCEL_HPP_

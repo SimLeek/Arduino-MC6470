@@ -1,7 +1,10 @@
-#ifndef __MC6470_REGISTERS_MAG_HPP
-#define __MC6470_REGISTERS_MAG_HPP
+// Copyright (C) 2022 - Simleek <simulatorleek@gmail.com> - MIT License
+
+#ifndef INCLUDE_MC6470_REGISTERS_MAG_HPP_
+#define INCLUDE_MC6470_REGISTERS_MAG_HPP_
 
 #include <Arduino.h>
+#include <map>
 
 namespace MC6470
 {
@@ -21,6 +24,14 @@ namespace MC6470
         FS = 0b00000010,
     } MAG_CTRL1_REG;
     const uint8_t mag_ctrl1_reg_address = 0x1B;
+
+    extern std::map<uint8_t, float> mag_get_rate_hz;
+
+    typedef enum : uint8_t
+    {
+        DEN = 0b00001000
+    } MAG_CTRL2_REG;
+    const uint8_t mag_ctrl2_reg_address = 0x1C;
 
     typedef enum : uint8_t
     {
@@ -42,6 +53,6 @@ namespace MC6470
         RANGE_15BIT = 0b00010000,
     } MAG_RANGE_REG;
     const uint8_t mag_range_reg_address = 0x1E;
-}
+} // namespace MC6470
 
-#endif
+#endif // INCLUDE_MC6470_REGISTERS_MAG_HPP_
